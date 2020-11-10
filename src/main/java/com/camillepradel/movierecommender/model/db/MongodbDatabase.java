@@ -3,12 +3,25 @@ package com.camillepradel.movierecommender.model.db;
 import com.camillepradel.movierecommender.model.Genre;
 import com.camillepradel.movierecommender.model.Movie;
 import com.camillepradel.movierecommender.model.Rating;
+import com.mongodb.DB;
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 public class MongodbDatabase extends AbstractDatabase {
-
+    
+    
+    MongoClient mongoClient;
+    DB db;
+    
+    public MongodbDatabase(){
+        mongoClient= new MongoClient( new MongoClientURI("mongodb://localhost:27017"));
+        db = mongoClient.getDB("movie_recommender");
+    }
+    
+    
     @Override
     public List<Movie> getAllMovies() {
         // TODO: write query to retrieve all movies from DB

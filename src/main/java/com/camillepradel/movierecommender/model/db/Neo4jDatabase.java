@@ -3,15 +3,31 @@ package com.camillepradel.movierecommender.model.db;
 import com.camillepradel.movierecommender.model.Genre;
 import com.camillepradel.movierecommender.model.Movie;
 import com.camillepradel.movierecommender.model.Rating;
+import java.io.File;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.GraphDatabaseService;
 
 public class Neo4jDatabase extends AbstractDatabase {
 
+    
+    GraphDatabaseService graphDb;
+    DatabaseManagementService dbService;
+    
+    public Neo4jDatabase() {
+        dbService = new DatabaseManagementServiceBuilder(null).build();
+        graphDb = dbService.database("movie_recommender");
+        registerShutdownHook(dbService);
+    }
+
+     
+    
     @Override
     public List<Movie> getAllMovies() {
-        // TODO: write query to retrieve all movies from DB
+        // TODO: write query to retrieve all movies from DB 
         List<Movie> movies = new LinkedList<Movie>();
         Genre genre0 = new Genre(0, "genre0");
         Genre genre1 = new Genre(1, "genre1");
@@ -76,5 +92,14 @@ public class Neo4jDatabase extends AbstractDatabase {
         recommendations.add(new Rating(new Movie(2, titlePrefix + "Titre 2", Arrays.asList(new Genre[]{genre1})), userId, 4));
         recommendations.add(new Rating(new Movie(3, titlePrefix + "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})), userId, 3));
         return recommendations;
+    }
+    
+    private static void registerShutdownHook(final DatabaseManagementService manager) {
+        Runtime.getRuntime().addShutdownHook(new Thread(){
+        @Override
+        public void run(){
+            manager.shutdown();
+        }
+        });
     }
 }
