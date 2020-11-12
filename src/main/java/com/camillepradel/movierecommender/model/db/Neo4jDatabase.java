@@ -7,20 +7,17 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 
 public class Neo4jDatabase extends AbstractDatabase {
 
     
     GraphDatabaseService graphDb;
-    DatabaseManagementService dbService;
     
     public Neo4jDatabase() {
-        dbService = new DatabaseManagementServiceBuilder(null).build();
-        graphDb = dbService.database("movie_recommender");
-        registerShutdownHook(dbService);
+        graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(null);
+        registerShutdownHook(graphDb);
     }
 
      
@@ -94,8 +91,9 @@ public class Neo4jDatabase extends AbstractDatabase {
         return recommendations;
     }
     
-    private static void registerShutdownHook(final DatabaseManagementService manager) {
+    private static void registerShutdownHook(final GraphDatabaseService manager) {
         Runtime.getRuntime().addShutdownHook(new Thread(){
+        
         @Override
         public void run(){
             manager.shutdown();
