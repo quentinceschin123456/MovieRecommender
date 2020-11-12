@@ -4,6 +4,10 @@ import com.camillepradel.movierecommender.model.Genre;
 import com.camillepradel.movierecommender.model.Movie;
 import com.camillepradel.movierecommender.model.Rating;
 import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.DBObject;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBCursor;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import java.util.Arrays;
@@ -33,6 +37,34 @@ public class MongodbDatabase extends AbstractDatabase {
         movies.add(new Movie(1, "Titre 1", Arrays.asList(new Genre[]{genre0, genre2})));
         movies.add(new Movie(2, "Titre 2", Arrays.asList(new Genre[]{genre1})));
         movies.add(new Movie(3, "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})));
+        
+        int nb = db.command("db.find('movies')").size();
+        System.out.println("NB MOVIES :"+ nb);
+        DBCollection collection = db.getCollection("movies");
+       
+        //DBObject res = collection.findOne();
+        //movies.add(buildMovie(res));
+                
+        // movies
+        DBCollection moviesColl = db.getCollection("movies");
+        DBObject query = new BasicDBObject();
+        query.put("_id",0);
+        query.put("date",0);
+        DBCursor m = moviesColl.find(query);
+
+        // mov_gen
+        DBCollection mov_genColl = db.getCollection("movi_genre");
+        DBObject query2 = new BasicDBObject();
+        query2.put("_id",0);
+        DBCursor mg = mov_genColl.find(query2);
+        // genres
+        DBCollection genresColl = db.getCollection("genres");
+        DBObject query3 = new BasicDBObject();
+        query3.put("_id",0);
+        query3.put("date",0);
+        DBCursor g = genresColl.find(query3);
+        // mapping
+        
         return movies;
     }
 
@@ -89,5 +121,18 @@ public class MongodbDatabase extends AbstractDatabase {
         recommendations.add(new Rating(new Movie(2, titlePrefix + "Titre 2", Arrays.asList(new Genre[]{genre1})), userId, 4));
         recommendations.add(new Rating(new Movie(3, titlePrefix + "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})), userId, 3));
         return recommendations;
-    }    
+    }  
+    
+    private Movie buildMovie(DBObject movie,DBObject m_g,DBObject genres){
+        Movie m = null;
+        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.buildMovie()" + movie.toMap().toString());
+        if (movie != null){
+            m = new Movie(
+                            Integer.parseInt((String) movie.get("id")),
+                            (String)movie.get("title"),
+                    null
+                            );
+        }
+        return m;
+    }
 }
