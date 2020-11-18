@@ -55,9 +55,12 @@
             <version>3.12.7</version>
         </dependency>
          <dependency>
-            <groupId>org.neo4j</groupId>
+            <!-- <groupId>org.neo4j</groupId>
             <artifactId>neo4j</artifactId>
-            <version>3.5.23</version>
+            <version>3.5.23</version> -->
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
+            <version>4.1.1</version>
         </dependency>
         
     </dependencies>
