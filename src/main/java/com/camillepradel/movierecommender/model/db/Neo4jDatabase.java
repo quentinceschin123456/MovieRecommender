@@ -23,11 +23,9 @@ public class Neo4jDatabase extends AbstractDatabase {
 
     private final Driver driver;
     private Transaction tx;
-    private HashMap localGenres;
     
     public Neo4jDatabase() {
         driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic( "neo4j", "neo4j"));
-        localGenres = new HashMap();
     }
 
     @Override
@@ -182,6 +180,28 @@ public class Neo4jDatabase extends AbstractDatabase {
         // TODO: add query which
         //         - add rating between specified user and movie if it doesn't exist
         //         - update it if it does exist
+        
+        try ( Session session = driver.session() )
+        {
+            session.writeTransaction( new TransactionWork<Void>() {
+                @Override
+                public Void execute( Transaction tx ) {
+                    tx.run(
+                        "MATCH (u:User{id:$userId})\n" +
+                        "MATCH (m:Movie{id:$movieId})\n" +
+                        "MERGE (u)-[r:RATED]->(m)\n" +
+                        "ON CREATE SET r.note = $rate\n" +
+                        "ON MATCH SET r.note = $rate",
+                        parameters(
+                            "userId", rating.getUserId(),
+                            "movieId", rating.getMovieId(),
+                            "rate", rating.getScore()
+                        )
+                    );
+                    return null;
+                }
+            });
+        }
     }
 
     @Override
