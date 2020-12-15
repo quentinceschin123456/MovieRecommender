@@ -10,9 +10,13 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBCursor;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+
 
 public class MongodbDatabase extends AbstractDatabase {
     
@@ -29,7 +33,7 @@ public class MongodbDatabase extends AbstractDatabase {
     @Override
     public List<Movie> getAllMovies() {
         // TODO: write query to retrieve all movies from DB
-        List<Movie> movies = new LinkedList<Movie>();
+        /*
         Genre genre0 = new Genre(0, "genre0");
         Genre genre1 = new Genre(1, "genre1");
         Genre genre2 = new Genre(2, "genre2");
@@ -37,46 +41,189 @@ public class MongodbDatabase extends AbstractDatabase {
         movies.add(new Movie(1, "Titre 1", Arrays.asList(new Genre[]{genre0, genre2})));
         movies.add(new Movie(2, "Titre 2", Arrays.asList(new Genre[]{genre1})));
         movies.add(new Movie(3, "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})));
+        */
         
         int nb = db.command("db.find('movies')").size();
         System.out.println("NB MOVIES :"+ nb);
-        DBCollection collection = db.getCollection("movies");
        
         //DBObject res = collection.findOne();
         //movies.add(buildMovie(res));
                 
         // movies
+        Map<Integer,Movie> dicoMovies = new HashMap<Integer,Movie>();
         DBCollection moviesColl = db.getCollection("movies");
-        DBObject query = new BasicDBObject();
-        query.put("_id",0);
-        query.put("date",0);
-        DBCursor m = moviesColl.find(query);
-
-        // mov_gen
-        DBCollection mov_genColl = db.getCollection("movi_genre");
-        DBObject query2 = new BasicDBObject();
-        query2.put("_id",0);
-        DBCursor mg = mov_genColl.find(query2);
+        DBObject fields = new BasicDBObject();
+        fields.put("_id",0);
+        fields.put("date",0);
+        DBCursor cursorM = moviesColl.find(new BasicDBObject(),fields );
+        try{
+            while (cursorM.hasNext()) {
+                DBObject next = cursorM.next();
+                Movie m = buildMovie(next);
+                dicoMovies.put(m.getId(),m);
+                System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getAllMovies()" + next);
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        finally {
+            cursorM.close();
+        }
+        
+       
         // genres
         DBCollection genresColl = db.getCollection("genres");
-        DBObject query3 = new BasicDBObject();
-        query3.put("_id",0);
-        query3.put("date",0);
-        DBCursor g = genresColl.find(query3);
-        // mapping
+        DBObject querygenre = new BasicDBObject();
+        querygenre.put("_id",0);
+        // query3.put("id", new BasicDBObject("$in",genresId));
+        //List<Genre> genres = new ArrayList<Genre>();
+        Map<Integer,Genre> genres= new HashMap<Integer,Genre>();
+        DBCursor g = genresColl.find(querygenre);
+         try{
+            while (g.hasNext()) {
+                DBObject next =g.next();
+                Genre g1 = buildGenre(next);
+                genres.put(g1.getId(),g1);
+            }
+        }finally {
+            g.close();
+        }
         
+        // mov_gen
+        DBCollection mov_genColl = db.getCollection("movie_genre");
+        DBObject query2 = new BasicDBObject();       
+        query2.put("mov_id", new BasicDBObject("$in",dicoMovies.keySet()));
+        DBObject fields2 = new BasicDBObject();
+        fields2.put("_id",0);
+        DBCursor mg = mov_genColl.find(query2,fields2);
+        List<Integer> genresId = new ArrayList<Integer>();
+        
+        try{
+            while (mg.hasNext()) {
+                DBObject next = mg.next();
+                int movid = Integer.parseInt((String) next.get("mov_id"));
+                int genreId = Integer.parseInt((String) next.get("genre"));
+                Movie currentM = dicoMovies.get(movid);
+                Genre currentG = genres.get(genreId);
+                if (!currentM.getGenres().contains(currentG)){
+                    currentM.addGenre(currentG);
+                }
+            }
+        }finally {
+            mg.close();
+        }
+        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getAllMovies() " + dicoMovies.size());
+        List<Movie> movies = new LinkedList<Movie>(dicoMovies.values());
         return movies;
     }
 
     @Override
     public List<Movie> getMoviesRatedByUser(int userId) {
         // TODO: write query to retrieve all movies rated by user with id userId
-        List<Movie> movies = new LinkedList<Movie>();
-        Genre genre0 = new Genre(0, "genre0");
+        //List<Movie> movies = new LinkedList<Movie>();
+        /*Genre genre0 = new Genre(0, "genre0");
         Genre genre1 = new Genre(1, "genre1");
         Genre genre2 = new Genre(2, "genre2");
         movies.add(new Movie(0, "Titre 0", Arrays.asList(new Genre[]{genre0, genre1})));
-        movies.add(new Movie(3, "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})));
+        movies.add(new Movie(3, "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2}))); */
+        
+        DBCollection ratingsColl = db.getCollection("ratings");
+        DBObject queryRatings = new BasicDBObject();
+        queryRatings.put("user_id",userId+"");
+        DBObject fields3 = new BasicDBObject();
+        fields3.put("_id",0);
+        fields3.put("user_id",0);
+        fields3.put("rating",0);
+        fields3.put("timestamp",0);
+        // query3.put("id", new BasicDBObject("$in",genresId));
+        //List<Genre> genres = new ArrayList<Genre>();
+        System.out.println(queryRatings);
+        System.out.println(fields3);
+        List<String> ids = new ArrayList<String>();
+        DBCursor rat = ratingsColl.find(queryRatings,fields3);
+         try{
+            while (rat.hasNext()) {
+                DBObject next = rat.next();
+                String str = (String)next.get("mov_id");
+                System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getMoviesRatedByUser()" + str);
+                ids.add(str);
+            }
+        }finally {
+            rat.close();
+        }
+       
+         System.out.println(" elemetns" + ids.size());
+        for (String id :ids){
+            System.out.println(id);
+        } 
+        
+        Map<Integer,Movie> dicoMovies = new HashMap<Integer,Movie>();
+        DBCollection moviesColl = db.getCollection("movies");
+        DBObject fields = new BasicDBObject();
+        fields.put("_id",0);
+        fields.put("date",0);
+        DBObject body = new BasicDBObject();
+        body.put("id", new BasicDBObject("$in",ids));
+       
+        DBCursor cursorM = moviesColl.find(body,fields );
+        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getMoviesRatedByUser()" + body );
+        try{
+            while (cursorM.hasNext()) {
+                DBObject next = cursorM.next();
+                Movie m = buildMovie(next);
+                dicoMovies.put(m.getId(),m);
+                System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getAllMovies()" + next);
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        finally {
+            cursorM.close();
+        }
+        
+       
+        // genres
+        DBCollection genresColl = db.getCollection("genres");
+        DBObject querygenre = new BasicDBObject();
+        querygenre.put("_id",0);
+        // query3.put("id", new BasicDBObject("$in",genresId));
+        //List<Genre> genres = new ArrayList<Genre>();
+        Map<Integer,Genre> genres= new HashMap<Integer,Genre>();
+        DBCursor g = genresColl.find(querygenre);
+         try{
+            while (g.hasNext()) {
+                DBObject next =g.next();
+                Genre g1 = buildGenre(next);
+                genres.put(g1.getId(),g1);
+            }
+        }finally {
+            g.close();
+        }
+        
+        // mov_gen
+        DBCollection mov_genColl = db.getCollection("movie_genre");
+        DBObject query2 = new BasicDBObject();
+        query2.put("_id",0);
+        query2.put("mov_id", new BasicDBObject("$in",dicoMovies.keySet()));
+        DBCursor mg = mov_genColl.find(query2);
+        List<Integer> genresId = new ArrayList<Integer>();
+        
+        try{
+            while (mg.hasNext()) {
+                DBObject next = mg.next();
+                int movid = Integer.parseInt((String) next.get("mov_id"));
+                int genreId = Integer.parseInt((String) next.get("genre"));
+                Movie currentM = dicoMovies.get(movid);
+                Genre currentG = genres.get(genreId);
+                if (!currentM.getGenres().contains(currentG)){
+                    currentM.addGenre(currentG);
+                }
+            }
+        }finally {
+            mg.close();
+        }
+        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getAllMovies() " + dicoMovies.size());
+        List<Movie> movies = new LinkedList<Movie>(dicoMovies.values());
         return movies;
     }
 
@@ -123,16 +270,40 @@ public class MongodbDatabase extends AbstractDatabase {
         return recommendations;
     }  
     
-    private Movie buildMovie(DBObject movie,DBObject m_g,DBObject genres){
+    private Movie buildMovie(DBObject movie){
         Movie m = null;
-        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.buildMovie()" + movie.toMap().toString());
+        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.buildMovie()" + movie);
         if (movie != null){
             m = new Movie(
                             Integer.parseInt((String) movie.get("id")),
-                            (String)movie.get("title"),
-                    null
-                            );
+                            (String)movie.get("title")
+                         );
         }
         return m;
     }
+    
+    private List<Integer> getAllMovieIds(List<Movie> listM){
+       List<Integer> res = new ArrayList<Integer>();
+        int i =0;
+        for (Movie m :listM){
+            res.add(m.getId());
+            i++;
+        }
+        
+        return res;
+    }
+    
+    private Genre buildGenre(DBObject genre){
+        Genre g = null;
+        if (genre != null){
+            g = new Genre(
+                            Integer.parseInt((String) genre.get("id")),
+                            (String)genre.get("name")
+                         );
+        }
+        return g;
+    }
+    
+  
+    
 }

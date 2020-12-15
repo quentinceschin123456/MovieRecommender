@@ -1,5 +1,6 @@
 package com.camillepradel.movierecommender.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Movie {
@@ -13,6 +14,12 @@ public class Movie {
         this.title = title;
         this.genres = genres;
     }
+    
+    public Movie(int id,String title){
+        this.id = id;
+        this.title = title;
+        this.genres = new ArrayList<Genre>();
+    }
 
     public int getId() {
         return this.id;
@@ -24,5 +31,9 @@ public class Movie {
 
     public List<Genre> getGenres() {
         return this.genres;
+    }
+    
+    public void addGenre(Genre g){
+        this.genres.add(g);
     }
 }
