@@ -3,6 +3,7 @@ package com.camillepradel.movierecommender.model.db;
 import com.camillepradel.movierecommender.model.Genre;
 import com.camillepradel.movierecommender.model.Movie;
 import com.camillepradel.movierecommender.model.Rating;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -25,7 +26,7 @@ public class Neo4jDatabase extends AbstractDatabase {
     private Transaction tx;
     
     public Neo4jDatabase() {
-        driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic( "neo4j", "neo4j"));
+        driver = GraphDatabase.driver("bolt://localhost:7687", AuthTokens.basic( "oreo4j", "oreo4j"));
     }
 
     @Override
@@ -208,7 +209,7 @@ public class Neo4jDatabase extends AbstractDatabase {
     public List<Rating> processRecommendationsForUser(int userId, int processingMode) {
         // TODO: process recommendations for specified user exploiting other users ratings
         //       use different methods depending on processingMode parameter
-        Genre genre0 = new Genre(0, "genre0");
+        /*Genre genre0 = new Genre(0, "genre0");
         Genre genre1 = new Genre(1, "genre1");
         Genre genre2 = new Genre(2, "genre2");
         List<Rating> recommendations = new LinkedList<Rating>();
@@ -226,7 +227,101 @@ public class Neo4jDatabase extends AbstractDatabase {
         recommendations.add(new Rating(new Movie(1, titlePrefix + "Titre 1", Arrays.asList(new Genre[]{genre0, genre2})), userId, 5));
         recommendations.add(new Rating(new Movie(2, titlePrefix + "Titre 2", Arrays.asList(new Genre[]{genre1})), userId, 4));
         recommendations.add(new Rating(new Movie(3, titlePrefix + "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})), userId, 3));
-        return recommendations;
+        return recommendations;*/
+        switch(processingMode) {
+            case 1 : {
+                HashMap<Integer, Genre> allGenres = getAllGenres();
+                List<Movie> allMovies = new LinkedList<Movie>();
+                List<Rating> recommendations = new LinkedList<Rating>();
+
+                /// Todo : Change LinkedList
+                try ( Session session = driver.session() )
+                {
+                    return session.readTransaction(tx -> {
+                        Result rs = tx.run(
+                            "MATCH (target_user:User {id :$userId})-[:RATED]->(m:Movie) <-[:RATED]-(other_user:User)\n" +
+                            "WITH other_user, count(distinct m.title) AS num_common_movies, target_user\n" +
+                            "ORDER BY num_common_movies DESC\n" +
+                            "LIMIT 1\n" +
+                            "MATCH (other_user)-[rat_other_user:RATED]->(m2:Movie)-[:CATEGORIZED_AS]->(g:Genre)\n" +
+                            "WHERE NOT (target_user)-[:RATED]->(m2)\n" +
+                            "RETURN m2.id as rec_movie_id, m2.title AS rec_movie_title, collect(g.id) as genre_ids, rat_other_user.note AS rating, other_user.id AS watched_by\n" +
+                            "ORDER BY rat_other_user.note DESC",
+                            parameters("userId", userId)
+                        );
+                       while(rs.hasNext()) {
+                            Record aRec = rs.next();
+                            Integer movieId = aRec.get(0).asInt();
+                            String movieName = aRec.get(1).asString();
+                            String genreIds = aRec.get(2).toString();
+                            Integer rating = aRec.get(3).asInt();
+                            Integer userWhoWatched = aRec.get(4).asInt();
+
+                            // Ajout du genre pour le film correspondant
+                            String IdsExtracted = genreIds.substring(genreIds.indexOf("[")+1, genreIds.indexOf("]"));
+                            List<Genre> movieGenres = new LinkedList<>();
+                            for (String genreId : IdsExtracted.split(", ")) {
+                                movieGenres.add(allGenres.get(Integer.parseInt(genreId)));
+                            }
+
+                            // Des genres dans le film qui est ajouté dans Rating avec l'ID user et la note associé
+                            recommendations.add(new Rating(new Movie(movieId, movieName, movieGenres), userWhoWatched, rating));
+                        }
+                        return recommendations;
+                    });
+                } catch (Exception e) {
+                    System.err.println("Error : " + e.getMessage());
+                    break;
+                }
+            }
+            case 2 : {
+                HashMap<Integer, Genre> allGenres = getAllGenres();
+                List<Movie> allMovies = new LinkedList<Movie>();
+                List<Rating> recommendations = new LinkedList<Rating>();
+
+                /// Todo : Change LinkedList
+                try ( Session session = driver.session() )
+                {
+                    return session.readTransaction(tx -> {
+                        Result rs = tx.run(
+                            "MATCH (target_user:User {id :$userId})-[:RATED]->(m:Movie)<-[:RATED]-(other_user:User)\n" +
+                            "WITH other_user, count(distinct m.title) AS num_common_movies, target_user\n" +
+                            "ORDER BY num_common_movies DESC\n" +
+                            "LIMIT 5\n" +
+                            "MATCH (other_user)-[rat_other_user:RATED]->(m2:Movie)\n" +
+                            "WHERE NOT (target_user)-[:RATED]->(m2)\n" +
+                            "RETURN m2.id as rec_movie_id, m2.title AS rec_movie_title, avg(rat_other_user.note) AS rating, count(other_user.id) AS nb_watched\n" +
+                            "ORDER BY rating DESC, nb_watched DESC",
+                            parameters("userId", userId)
+                        );
+                       while(rs.hasNext()) {
+                            Record aRec = rs.next();
+                            Integer movieId = aRec.get(0).asInt();
+                            String movieName = aRec.get(1).asString();
+                            //Integer rating = aRec.get(2).asInt();
+                            //Integer nbUser = aRec.get(3).asInt();
+
+                            // Ajout du genre pour le film correspondant
+                            /*String IdsExtracted = genreIds.substring(genreIds.indexOf("[")+1, genreIds.indexOf("]"));
+                            List<Genre> movieGenres = new LinkedList<>();
+                            for (String genreId : IdsExtracted.split(", ")) {
+                                movieGenres.add(allGenres.get(Integer.parseInt(genreId)));
+                            }*/
+
+                            // Des genres dans le film qui est ajouté dans Rating avec l'ID user et la note associé
+                            recommendations.add(new Rating(new Movie(movieId, movieName, null), 0, 0));
+                        }
+                        return recommendations;
+                    });
+                } catch (Exception e) {
+                    System.err.println("Error : " + e.getMessage());
+                    break;
+                }
+            }
+            default :
+                return new LinkedList<Rating>();
+        }
+        return new LinkedList<Rating>();
     }
     
     /* ----- HELPERS ----- */
