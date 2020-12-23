@@ -249,7 +249,7 @@ public class Neo4jDatabase extends AbstractDatabase {
                             "ORDER BY rat_other_user.note DESC",
                             parameters("userId", userId)
                         );
-                       while(rs.hasNext()) {
+                        while(rs.hasNext()) {
                             Record aRec = rs.next();
                             Integer movieId = aRec.get(0).asInt();
                             String movieName = aRec.get(1).asString();
@@ -294,7 +294,7 @@ public class Neo4jDatabase extends AbstractDatabase {
                             "ORDER BY rating DESC, nb_watched DESC",
                             parameters("userId", userId)
                         );
-                       while(rs.hasNext()) {
+                        while(rs.hasNext()) {
                             Record aRec = rs.next();
                             Integer movieId = aRec.get(0).asInt();
                             String movieName = aRec.get(1).asString();
@@ -318,6 +318,72 @@ public class Neo4jDatabase extends AbstractDatabase {
                     break;
                 }
             }
+            case 3 : {
+                HashMap<Integer, Genre> allGenres = getAllGenres();
+                List<Movie> allMovies = new LinkedList<Movie>();
+                List<Rating> recommendations = new LinkedList<Rating>();
+
+                /// Todo : Change LinkedList
+                try ( Session session = driver.session() )
+                {
+                    return session.readTransaction(tx -> {
+                        Result rs = tx.run(
+                            "MATCH (u:User {id :$userId})-[r:RATED]->(:Movie)\n" +
+                            "WITH u as target_user, count(r) as nbTgRate\n" +
+                            "MATCH (target_user)-[r_target_user:RATED]->(m:Movie)<-[r_other_user:RATED]-(other_user:User)\n" +
+                            "WITH count(distinct m.title) AS num_common_movies, target_user, other_user, avg(4 - abs(r_target_user.note - r_other_user.note)) as degreeDeSimilarite, nbTgRate as ratesNb\n" +
+                            "WHERE num_common_movies >= (ratesNb / 2)\n" +
+                            "RETURN other_user.id\n" +
+                            "ORDER BY degreeDeSimilarite DESC, num_common_movies DESC\n" +
+                            "LIMIT 1",
+                            parameters("userId", userId)
+                        );
+                        
+                        Integer otherUserId = null;
+                        
+                        if (rs.hasNext()) {
+                            Record aRec = rs.next();
+                            otherUserId = aRec.get(0).asInt();
+                        }
+                        
+                        if (otherUserId != null) {
+                            rs = tx.run(
+                                "MATCH (other_user:User {id :$otherUserId})-[rat_other_user:RATED]->(m2:Movie)-[:CATEGORIZED_AS]->(g:Genre)\n" +
+                                "WHERE NOT (:User {id: $userId})-[:RATED]->(m2)\n" +
+                                "RETURN m2.id as rec_movie_id, m2.title AS rec_movie_title, collect(g.id) as genre_ids, rat_other_user.note AS rating, other_user.id AS watched_by\n" +
+                                "ORDER BY rat_other_user.note DESC",
+                                parameters(
+                                        "otherUserId", otherUserId,
+                                        "userId", userId
+                                )
+                            );
+                            
+                            while(rs.hasNext()) {
+                                Record aRec = rs.next();
+                                Integer movieId = aRec.get(0).asInt();
+                                String movieName = aRec.get(1).asString();
+                                //Integer rating = aRec.get(2).asInt();
+                                //Integer nbUser = aRec.get(3).asInt();
+
+                                // Ajout du genre pour le film correspondant
+                                /*String IdsExtracted = genreIds.substring(genreIds.indexOf("[")+1, genreIds.indexOf("]"));
+                                List<Genre> movieGenres = new LinkedList<>();
+                                for (String genreId : IdsExtracted.split(", ")) {
+                                    movieGenres.add(allGenres.get(Integer.parseInt(genreId)));
+                                }*/
+
+                                // Des genres dans le film qui est ajouté dans Rating avec l'ID user et la note associé
+                                recommendations.add(new Rating(new Movie(movieId, movieName, null), 0, 0));
+                            }
+                        }
+                        return recommendations;
+                    });
+                } catch (Exception e) {
+                    System.err.println("Error : " + e.getMessage());
+                    break;
+                }
+            }
+            
             default :
                 return new LinkedList<Rating>();
         }
