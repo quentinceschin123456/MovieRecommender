@@ -3,6 +3,7 @@ package com.camillepradel.movierecommender.model.db;
 import com.camillepradel.movierecommender.model.Genre;
 import com.camillepradel.movierecommender.model.Movie;
 import com.camillepradel.movierecommender.model.Rating;
+import com.mongodb.BasicDBList;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
@@ -11,6 +12,10 @@ import com.mongodb.DBCursor;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.WriteResult;
+import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.DBCollectionUpdateOptions;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,6 +23,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.function.Consumer;
+import org.bson.Document;
+import static com.mongodb.client.model.Aggregates.*;
+import com.mongodb.client.model.Sorts;
+import org.bson.BsonDocument;
+import org.bson.conversions.Bson;
 
 
 public class MongodbDatabase extends AbstractDatabase {
@@ -63,7 +74,7 @@ public class MongodbDatabase extends AbstractDatabase {
                 DBObject next = cursorM.next();
                 Movie m = buildMovie(next);
                 dicoMovies.put(m.getId(),m);
-                System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getAllMovies()" + next);
+                //System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getAllMovies()" + next);
             }
         }catch(Exception e){
             e.printStackTrace();
@@ -146,18 +157,18 @@ public class MongodbDatabase extends AbstractDatabase {
             while (rat.hasNext()) {
                 DBObject next = rat.next();
                 String str = (String)next.get("mov_id");
-                System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getMoviesRatedByUser()" + str);
+                //System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getMoviesRatedByUser()" + str);
                 ids.add(str);
             }
         }finally {
             rat.close();
         }
        
-         System.out.println(" elemetns" + ids.size());
+        /* System.out.println(" elemetns" + ids.size());
         for (String id :ids){
             System.out.println(id);
         } 
-        
+        */
         Map<Integer,Movie> dicoMovies = new HashMap<Integer,Movie>();
         DBCollection moviesColl = db.getCollection("movies");
         DBObject fields = new BasicDBObject();
@@ -222,7 +233,6 @@ public class MongodbDatabase extends AbstractDatabase {
         }finally {
             mg.close();
         }
-        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getAllMovies() " + dicoMovies.size());
         List<Movie> movies = new LinkedList<Movie>(dicoMovies.values());
         return movies;
     }
@@ -316,7 +326,6 @@ public class MongodbDatabase extends AbstractDatabase {
                 DBObject next = rat.next();
                 int movieId = Integer.parseInt((String)next.get("mov_id"));
                 int score =Integer.parseInt((String)next.get("rating"));
-                System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getMoviesRatedByUser()" + movieId+ "/ " + dicoMovies.get(movieId));
                 ratings.add(new Rating( dicoMovies.get(movieId),userId,score));
             }
         }finally {
@@ -341,7 +350,6 @@ public class MongodbDatabase extends AbstractDatabase {
         data.put("user_id",rating.getUserId()+"");      
         data.put("rating",rating.getScore()+"");
         update.put("$set",data);
-        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.addOrUpdateRating()" +query + "\n"+update );
         WriteResult r = ratingsColl.update(query, update, new DBCollectionUpdateOptions().upsert(true));
         System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.addOrUpdateRating()"+ r.toString());
     }
@@ -354,20 +362,26 @@ public class MongodbDatabase extends AbstractDatabase {
         Genre genre1 = new Genre(1, "genre1");
         Genre genre2 = new Genre(2, "genre2");
         List<Rating> recommendations = new LinkedList<Rating>();
-        String titlePrefix;
+        //String titlePrefix;
         if (processingMode == 0) {
-            titlePrefix = "0_";
+            //titlePrefix = "0_";
+            recommandationWithOneUser(recommendations,userId);
         } else if (processingMode == 1) {
-            titlePrefix = "1_";
+            //titlePrefix = "1_";
+            recommandationWithFiveUser(recommendations,userId);
         } else if (processingMode == 2) {
-            titlePrefix = "2_";
+            //titlePrefix = "2_";
+            recommandationWithRatings(recommendations,userId);
         } else {
-            titlePrefix = "default_";
+            //titlePrefix = "default_";
+            
         }
+        /*
         recommendations.add(new Rating(new Movie(0, titlePrefix + "Titre 0", Arrays.asList(new Genre[]{genre0, genre1})), userId, 5));
         recommendations.add(new Rating(new Movie(1, titlePrefix + "Titre 1", Arrays.asList(new Genre[]{genre0, genre2})), userId, 5));
         recommendations.add(new Rating(new Movie(2, titlePrefix + "Titre 2", Arrays.asList(new Genre[]{genre1})), userId, 4));
         recommendations.add(new Rating(new Movie(3, titlePrefix + "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})), userId, 3));
+        */
         return recommendations;
     }  
     
@@ -383,7 +397,7 @@ public class MongodbDatabase extends AbstractDatabase {
         return m;
     }
     
-    private List<Integer> getAllMovieIds(List<Movie> listM){
+    /*private List<Integer> getAllMovieIds(List<Movie> listM){
        List<Integer> res = new ArrayList<Integer>();
         int i =0;
         for (Movie m :listM){
@@ -393,7 +407,7 @@ public class MongodbDatabase extends AbstractDatabase {
         
         return res;
     }
-    
+    */
     private Genre buildGenre(DBObject genre){
         Genre g = null;
         if (genre != null){
@@ -404,7 +418,97 @@ public class MongodbDatabase extends AbstractDatabase {
         }
         return g;
     }
+
+    private void recommandationWithOneUser(List<Rating> recommendations, int userId) {
+        // on réécupère la liste de film de cet utilisateur
+        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser()");
+        DBCollection ratingsColl = db.getCollection("ratings");
+        DBObject queryRatings = new BasicDBObject();
+        queryRatings.put("user_id",userId+"");
+        DBObject fields3 = new BasicDBObject();
+        fields3.put("_id",0);
+        fields3.put("user_id",0);
+        fields3.put("rating",0);
+        fields3.put("timestamp",0);
+        // query3.put("id", new BasicDBObject("$in",genresId));
+        //List<Genre> genres = new ArrayList<Genre>();
+        List<String> ids = new ArrayList<String>();
+        DBCursor rat = ratingsColl.find(queryRatings,fields3);
+         try{
+            while (rat.hasNext()) {
+                DBObject next = rat.next();
+                String str = (String)next.get("mov_id");
+                //System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.getMoviesRatedByUser()" + str);
+                ids.add(str);
+            }
+        }finally {
+            rat.close();
+        }
+       
+         for (String i : ids){
+             System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser()"+ i);
+         }
+       // Pour chaque utilisateur, on stock celui qui a le max de film en commun
+       int userSim = -1;
+      /* DBObject requestRating = new BasicDBObject();
+       requestRating.put("id", new BasicDBObject("$in",ids));
+        db.getCollection("ratings").find(requestRating,new BasicDBObject()).forEach(doc -> {
+            
+        });
+       */
+       // top 1 : user count film in list order by max
+        
+       DBObject match = new BasicDBObject();
+       match.put("id", new BasicDBObject("$in",ids));
+       
+       Map<String, Object> dbObjIdMap = new HashMap<String, Object>();
+        dbObjIdMap.put("_id", "$user_id");
+        dbObjIdMap.put("nb", new BasicDBObject().put("$sum","1"));
+        DBObject group = new BasicDBObject( "_id", new BasicDBObject(dbObjIdMap));
+       
+       Iterable<DBObject> output = db.getCollection("ratings").aggregate(Arrays.asList(
+        (DBObject) new BasicDBObject("$group", group),
+        (DBObject) new BasicDBObject("$match",match),
+        (DBObject) new BasicDBObject("$sort", new BasicDBObject("nb", -1)),
+        (DBObject) new BasicDBObject("$limit", 1)
+        )).results();
+        
+        
+                
+       // on prend tout les films poir cet utilisateurs qui ne sont pas dans la liste du premier
+       Map<Integer,Movie> dicoMovies = new HashMap<Integer,Movie>();
+        DBCollection moviesColl = db.getCollection("ratings");
+        DBObject fields = new BasicDBObject();
+        fields.put("_id",0);
+        fields.put("date",0);
+        DBObject body = new BasicDBObject();
+        body.put("mov_id", new BasicDBObject("$nin",ids));
+        body.put("user_id",output.iterator().next().get("user_id"));
+       
+        DBCursor cursorM = moviesColl.find(body,fields );
+         try{
+            while (cursorM.hasNext()) {
+                DBObject next = rat.next();
+                int movieId = Integer.parseInt((String)next.get("mov_id"));
+                int score =Integer.parseInt((String)next.get("rating"));
+                recommendations.add(new Rating( dicoMovies.get(movieId),userId,score));
+            }
+        }finally {
+            cursorM.close();
+        }
+         
+         for (Rating r : recommendations){
+             System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser()" + r.toString());
+         }
+        
+    }
+
+    private void recommandationWithFiveUser(List<Rating> recommendations, int userId) {
+      
+    }
     
-  
+    private void recommandationWithRatings(List<Rating> recommendations, int userId) {
+         
+    }
     
 }
