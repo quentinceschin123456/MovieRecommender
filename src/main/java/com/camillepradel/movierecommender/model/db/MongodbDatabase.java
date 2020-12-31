@@ -3,11 +3,14 @@ package com.camillepradel.movierecommender.model.db;
 import com.camillepradel.movierecommender.model.Genre;
 import com.camillepradel.movierecommender.model.Movie;
 import com.camillepradel.movierecommender.model.Rating;
+import com.mongodb.AggregationOptions;
+import com.mongodb.AggregationOutput;
 import com.mongodb.BasicDBList;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 import com.mongodb.BasicDBObject;
+import com.mongodb.Cursor;
 import com.mongodb.DBCursor;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
@@ -362,6 +365,7 @@ public class MongodbDatabase extends AbstractDatabase {
         Genre genre1 = new Genre(1, "genre1");
         Genre genre2 = new Genre(2, "genre2");
         List<Rating> recommendations = new LinkedList<Rating>();
+        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.processRecommendationsForUser()");
         //String titlePrefix;
         if (processingMode == 0) {
             //titlePrefix = "0_";
@@ -446,7 +450,7 @@ public class MongodbDatabase extends AbstractDatabase {
         }
        
          for (String i : ids){
-             System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser()"+ i);
+             System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser() movie ID "+ i);
          }
        // Pour chaque utilisateur, on stock celui qui a le max de film en commun
        int userSim = -1;
@@ -459,22 +463,39 @@ public class MongodbDatabase extends AbstractDatabase {
        // top 1 : user count film in list order by max
         
        DBObject match = new BasicDBObject();
-       match.put("id", new BasicDBObject("$in",ids));
+       match.put("mov_id", new BasicDBObject("$in",ids));
        
+        DBObject sum = new BasicDBObject();
+        sum.put("$sum",1);
+        
        Map<String, Object> dbObjIdMap = new HashMap<String, Object>();
         dbObjIdMap.put("_id", "$user_id");
-        dbObjIdMap.put("nb", new BasicDBObject().put("$sum","1"));
-        DBObject group = new BasicDBObject( "_id", new BasicDBObject(dbObjIdMap));
-       
-       Iterable<DBObject> output = db.getCollection("ratings").aggregate(Arrays.asList(
-        (DBObject) new BasicDBObject("$group", group),
+        dbObjIdMap.put("nb",sum );
+        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser() REQUEST");
+        System.out.println(" request " +  new BasicDBObject("$group", new BasicDBObject(dbObjIdMap)).toString() + " // " +new BasicDBObject("$match",match) + 
+                " // " + new BasicDBObject("$sort", new BasicDBObject("nb", -1)) + " // " + new BasicDBObject("$limit", 1) );
+        
+       List<DBObject> request  = Arrays.asList(
         (DBObject) new BasicDBObject("$match",match),
+        (DBObject) new BasicDBObject("$group", new BasicDBObject(dbObjIdMap)),
         (DBObject) new BasicDBObject("$sort", new BasicDBObject("nb", -1)),
-        (DBObject) new BasicDBObject("$limit", 1)
-        )).results();
+        (DBObject) new BasicDBObject("$limit", 6)
+        );
+       for (DBObject d : request){
+           System.out.println(d.toString()+ ",");
+       }
+        Cursor aggrCursor =  db.getCollection("ratings").aggregate(request,AggregationOptions.builder().outputMode(AggregationOptions.OutputMode.INLINE).build());
         
-        
-                
+       List<String> idList = new ArrayList<String>();
+       while (aggrCursor.hasNext()){
+           String id = aggrCursor.next().get("_id").toString(); 
+           if (!id.equals(userId+"")){
+            idList.add(id);
+           }
+       }
+       
+        String user_id = idList.get(0);
+        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser() user_id :" + user_id);
        // on prend tout les films poir cet utilisateurs qui ne sont pas dans la liste du premier
        Map<Integer,Movie> dicoMovies = new HashMap<Integer,Movie>();
         DBCollection moviesColl = db.getCollection("ratings");
@@ -483,7 +504,7 @@ public class MongodbDatabase extends AbstractDatabase {
         fields.put("date",0);
         DBObject body = new BasicDBObject();
         body.put("mov_id", new BasicDBObject("$nin",ids));
-        body.put("user_id",output.iterator().next().get("user_id"));
+        body.put("user_id",user_id);
        
         DBCursor cursorM = moviesColl.find(body,fields );
          try{
@@ -498,7 +519,7 @@ public class MongodbDatabase extends AbstractDatabase {
         }
          
          for (Rating r : recommendations){
-             System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser()" + r.toString());
+             System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser() resultats " + r.toString());
          }
         
     }
