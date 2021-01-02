@@ -463,7 +463,11 @@ public class MongodbDatabase extends AbstractDatabase {
        // top 1 : user count film in list order by max
         
        DBObject match = new BasicDBObject();
-       match.put("mov_id", new BasicDBObject("$in",ids));
+       List<DBObject> and = new ArrayList<DBObject>();
+       and.add(new BasicDBObject("mov_id", new BasicDBObject("$in",ids)));
+       and.add(new BasicDBObject("user_id",new BasicDBObject("$ne", userId+"")));
+    
+       match.put("$and", and);
        
         DBObject sum = new BasicDBObject();
         sum.put("$sum",1);
@@ -471,55 +475,51 @@ public class MongodbDatabase extends AbstractDatabase {
        Map<String, Object> dbObjIdMap = new HashMap<String, Object>();
         dbObjIdMap.put("_id", "$user_id");
         dbObjIdMap.put("nb",sum );
-        System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser() REQUEST");
-        System.out.println(" request " +  new BasicDBObject("$group", new BasicDBObject(dbObjIdMap)).toString() + " // " +new BasicDBObject("$match",match) + 
-                " // " + new BasicDBObject("$sort", new BasicDBObject("nb", -1)) + " // " + new BasicDBObject("$limit", 1) );
-        
+       
        List<DBObject> request  = Arrays.asList(
         (DBObject) new BasicDBObject("$match",match),
         (DBObject) new BasicDBObject("$group", new BasicDBObject(dbObjIdMap)),
         (DBObject) new BasicDBObject("$sort", new BasicDBObject("nb", -1)),
-        (DBObject) new BasicDBObject("$limit", 6)
+        (DBObject) new BasicDBObject("$limit", 1)
         );
        for (DBObject d : request){
            System.out.println(d.toString()+ ",");
        }
-        Cursor aggrCursor =  db.getCollection("ratings").aggregate(request,AggregationOptions.builder().outputMode(AggregationOptions.OutputMode.INLINE).build());
+        Cursor aggrCursor =  ratingsColl.aggregate(request,AggregationOptions.builder().outputMode(AggregationOptions.OutputMode.INLINE).build());
         
        List<String> idList = new ArrayList<String>();
        while (aggrCursor.hasNext()){
            String id = aggrCursor.next().get("_id").toString(); 
-           if (!id.equals(userId+"")){
-            idList.add(id);
-           }
+           idList.add(id);
        }
        
         String user_id = idList.get(0);
         System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser() user_id :" + user_id);
        // on prend tout les films poir cet utilisateurs qui ne sont pas dans la liste du premier
-       Map<Integer,Movie> dicoMovies = new HashMap<Integer,Movie>();
-        DBCollection moviesColl = db.getCollection("ratings");
+       
+       
         DBObject fields = new BasicDBObject();
         fields.put("_id",0);
-        fields.put("date",0);
         DBObject body = new BasicDBObject();
         body.put("mov_id", new BasicDBObject("$nin",ids));
         body.put("user_id",user_id);
-       
-        DBCursor cursorM = moviesColl.find(body,fields );
+        
+        DBCursor cursorM = ratingsColl.find(body,fields );
          try{
             while (cursorM.hasNext()) {
-                DBObject next = rat.next();
+                DBObject next = cursorM.next();
                 int movieId = Integer.parseInt((String)next.get("mov_id"));
                 int score =Integer.parseInt((String)next.get("rating"));
-                recommendations.add(new Rating( dicoMovies.get(movieId),userId,score));
+                
+                recommendations.add(new Rating( getMovieById(movieId) ,userId,score));
             }
-        }finally {
+        }
+       finally {
             cursorM.close();
         }
          
          for (Rating r : recommendations){
-             System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser() resultats " + r.toString());
+             System.out.println("com.camillepradel.movierecommender.model.db.MongodbDatabase.recommandationWithOneUser() resultats " + r.getMovie());
          }
         
     }
@@ -531,5 +531,70 @@ public class MongodbDatabase extends AbstractDatabase {
     private void recommandationWithRatings(List<Rating> recommendations, int userId) {
          
     }
-    
+
+    private Movie getMovieById(int movieId) {
+        
+        Movie m = null;
+        DBCollection moviesColl = db.getCollection("movies");
+        DBObject fields = new BasicDBObject();
+        fields.put("_id",0);
+        fields.put("date",0);
+        DBCursor cursorM = moviesColl.find(new BasicDBObject("id",movieId+ ""),fields );
+        try{
+            while (cursorM.hasNext()) {
+                DBObject next = cursorM.next();
+                m = buildMovie(next);
+               
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        finally {
+            cursorM.close();
+        }
+        
+        
+        // genres
+        DBCollection genresColl = db.getCollection("genres");
+        DBObject querygenre = new BasicDBObject();
+        querygenre.put("_id",0);
+        // query3.put("id", new BasicDBObject("$in",genresId));
+        //List<Genre> genres = new ArrayList<Genre>();
+        Map<Integer,Genre> genresMap= new HashMap<Integer,Genre>();
+        DBCursor g = genresColl.find(querygenre);
+         try{
+            while (g.hasNext()) {
+                DBObject next =g.next();
+                Genre g1 = buildGenre(next);
+                genresMap.put(g1.getId(), g1);
+            }
+        }finally {
+            g.close();
+        }
+        
+        // mov_gen
+        DBCollection mov_genColl = db.getCollection("movie_genre");
+        DBObject query2 = new BasicDBObject();       
+        query2.put("mov_id", m.getId()+"");
+        DBObject fields2 = new BasicDBObject();
+        fields2.put("_id",0);
+        DBCursor mg = mov_genColl.find(query2,fields2);
+        
+        try{
+            while (mg.hasNext()) {
+                DBObject next = mg.next();
+                int movid = Integer.parseInt((String) next.get("mov_id"));
+                int genreId = Integer.parseInt((String) next.get("genre"));
+                
+                Genre currentG = genresMap.get(genreId);
+                if (!m.getGenres().contains(currentG)){
+                    m.addGenre(currentG);
+                }
+            }
+        }finally {
+            mg.close();
+        }
+        
+        return m;
+    }
 }
