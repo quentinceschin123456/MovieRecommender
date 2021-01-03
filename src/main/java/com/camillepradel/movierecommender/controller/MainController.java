@@ -17,6 +17,7 @@ import com.camillepradel.movierecommender.model.db.Neo4jDatabase;
 //import com.camillepradel.movierecommender.model.db.Neo4jDatabase;
 //import com.camillepradel.movierecommender.model.db.MongodbDatabase;
 import javax.annotation.PostConstruct;
+import com.camillepradel.movierecommender.testscript.TestGetMovies;
 
 @Controller
 public class MainController {
@@ -91,6 +92,16 @@ public class MainController {
         ModelAndView mv = new ModelAndView("recommendations");
         mv.addObject("recommendations", recommendations);
 
+        return mv;
+    }
+    
+    @RequestMapping(value = "/TestGetMoviesFor100RandomUsers")
+    public ModelAndView testWith10RandomUser() {
+        ModelAndView mv = new ModelAndView("testResult");
+        mv.addObject("name", "TestGetMoviesFor100RandomUsers");
+        
+        String message = TestGetMovies.executeTestGetMoviesFor100RandomUsers();
+        mv.addObject("message", message);
         return mv;
     }
 }
