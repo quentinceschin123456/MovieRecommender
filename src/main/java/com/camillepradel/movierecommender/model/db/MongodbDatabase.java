@@ -359,37 +359,36 @@ public class MongodbDatabase extends AbstractDatabase {
        
         String user_id = idList.get(0);
        
-        DBObject matchMovies = new BasicDBObject();
-       List<DBObject> andM = new ArrayList<DBObject>();
-       andM.add(new BasicDBObject("mov_id", new BasicDBObject("$nin",ids)));
-       andM.add(new BasicDBObject("user_id",user_id));
-    
-       matchMovies.put("$and", and);
-        
-        Map<String, Object> dbObjIdMapM = new HashMap<String, Object>();
-        dbObjIdMapM.put("_id", "$mov_id");
-        dbObjIdMapM.put("avg_rate", new BasicDBObject( "$avg" , "$rating") );
-        
-        List<DBObject> requestMovies  = Arrays.asList(
-        (DBObject) new BasicDBObject("$match",match),
-        (DBObject) new BasicDBObject("$group", new BasicDBObject(dbObjIdMapM)),
-        (DBObject) new BasicDBObject("$sort", new BasicDBObject("avg_rate", -1))
-        );
         
         
-        Cursor cursorM = ratingsColl.aggregate(requestMovies,AggregationOptions.builder().outputMode(AggregationOptions.OutputMode.INLINE).build());
+        
+        
+         
+        DBObject fields = new BasicDBObject();
+        fields.put("_id",0);
+        DBObject body = new BasicDBObject();
+        body.put("mov_id", new BasicDBObject("$nin",ids));
+        body.put("user_id",user_id);
+        
+        Cursor cursorM = ratingsColl.find(body,fields).sort(new BasicDBObject("rating",-1) ).limit(10) ;
          
         try{
             while (cursorM.hasNext()) {
                 DBObject next = cursorM.next();
-                int movieId = Integer.parseInt((String)next.get("_id"));
+                int movieId = Integer.parseInt((String)next.get("mov_id"));
+                int score = (int)next.get("rating");
                 
-                recommendations.add(new Rating( getMovieById(movieId) ,userId));
+                recommendations.add(new Rating( getMovieById(movieId) ,userId,score));
             }
         }
        finally {
             cursorM.close();
         }
+        
+        
+        
+        
+       
         }
     }
 
@@ -436,23 +435,35 @@ public class MongodbDatabase extends AbstractDatabase {
            idList.add(id);
        }
        
-
        
-        DBObject fields = new BasicDBObject();
-        fields.put("_id",0);
-        DBObject body = new BasicDBObject();
-        body.put("mov_id", new BasicDBObject("$nin",ids));
-        body.put("user_id",new BasicDBObject("$in",idList));
+       
+        DBObject matchMovies = new BasicDBObject();
+       List<DBObject> andM = new ArrayList<DBObject>();
+       andM.add(new BasicDBObject("mov_id", new BasicDBObject("$nin",ids)));
+       andM.add(new BasicDBObject("user_id",new BasicDBObject("$in",idList)));
+    
+       matchMovies.put("$and", and);
         
-        Cursor cursorM = ratingsColl.find(body,fields).sort(new BasicDBObject("rating",-1) ) ;
+        Map<String, Object> dbObjIdMapM = new HashMap<String, Object>();
+        dbObjIdMapM.put("_id", "$mov_id");
+        dbObjIdMapM.put("avg_rate", new BasicDBObject( "$avg" , "$rating") );
+        
+        List<DBObject> requestMovies  = Arrays.asList(
+        (DBObject) new BasicDBObject("$match",match),
+        (DBObject) new BasicDBObject("$group", new BasicDBObject(dbObjIdMapM)),
+        (DBObject) new BasicDBObject("$sort", new BasicDBObject("avg_rate", -1)),
+        (DBObject) new BasicDBObject("$limit", 10)
+        );
+        
+        
+        Cursor cursorM = ratingsColl.aggregate(requestMovies,AggregationOptions.builder().outputMode(AggregationOptions.OutputMode.INLINE).build());
          
         try{
             while (cursorM.hasNext()) {
                 DBObject next = cursorM.next();
-                int movieId = Integer.parseInt((String)next.get("mov_id"));
-                int score = (int)next.get("rating");
+                int movieId = Integer.parseInt((String)next.get("_id"));
                 
-                recommendations.add(new Rating( getMovieById(movieId) ,userId,score));
+                recommendations.add(new Rating( getMovieById(movieId) ,userId));
             }
         }
        finally {
@@ -537,7 +548,8 @@ public class MongodbDatabase extends AbstractDatabase {
         List<DBObject> requestMovies  = Arrays.asList(
         (DBObject) new BasicDBObject("$match",matchMovies),
         (DBObject) new BasicDBObject("$group", new BasicDBObject(dbObjIdMapM)),
-        (DBObject) new BasicDBObject("$sort", new BasicDBObject("avg_rate", -1))
+        (DBObject) new BasicDBObject("$sort", new BasicDBObject("avg_rate", -1)),
+        (DBObject) new BasicDBObject("$limit", 10)
         );
         
         
