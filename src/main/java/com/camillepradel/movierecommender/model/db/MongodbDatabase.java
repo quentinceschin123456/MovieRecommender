@@ -354,6 +354,8 @@ public class MongodbDatabase extends AbstractDatabase {
            String id = aggrCursor.next().get("_id").toString(); 
            idList.add(id);
        }
+       if (idList.size() > 0 ){
+           
        
         String user_id = idList.get(0);
        
@@ -387,6 +389,7 @@ public class MongodbDatabase extends AbstractDatabase {
         }
        finally {
             cursorM.close();
+        }
         }
     }
 
@@ -455,6 +458,7 @@ public class MongodbDatabase extends AbstractDatabase {
        finally {
             cursorM.close();
         }
+        
     }
     
     private void recommandationWithRatings(List<Rating> recommendations, int userId) {

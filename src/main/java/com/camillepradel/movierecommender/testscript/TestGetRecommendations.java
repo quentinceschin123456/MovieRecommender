@@ -1,17 +1,21 @@
 package com.camillepradel.movierecommender.testscript;
 
+import com.camillepradel.movierecommender.model.Movie;
+import com.camillepradel.movierecommender.model.Rating;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TestGetRecommendations {
 
     public static void main(String[] args) {
 
-        String urlStart = "http://localhost:8080/MovieRecommender/recommendations?user_id=";
+        /*String urlStart = "http://localhost:8080/MovieRecommender/recommendations?user_id=";
         int nbIterations = 1000;
         int userId = 0;
         long startTime = System.nanoTime();
@@ -48,6 +52,28 @@ public class TestGetRecommendations {
         long endTime = System.nanoTime();
         double time = (double) (endTime - startTime) / 1000000000.;
         System.out.println("Time to process " + nbIterations + " requests in one thread: " + time + "s");
-
-    }
+*/
+        TestRequest.addOrUpdateRatingRequest(new Rating(new Movie(0, "test"), 0, 0));
+       /*DataInputStream out = TestRequest.processRecommendationsForUser2(0);
+        String response = null;
+        try {
+            while (null != ((response = out.readLine()))) {
+                System.out.println(response);
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(TestGetRecommendations.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        finally{
+            try {
+                out.close();
+            } catch (IOException ex) {
+                Logger.getLogger(TestGetRecommendations.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+*/
+}
+        
+    
+    
+    
 }
