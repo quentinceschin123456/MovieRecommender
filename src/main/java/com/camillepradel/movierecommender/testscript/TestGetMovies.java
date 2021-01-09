@@ -55,4 +55,85 @@ public class TestGetMovies {
         System.out.println(result);
         return result;
     }
+    
+    public static DataInputStream getAllMovies() {
+        InputStream is = null;
+
+        try {
+            URL u = new URL("http://localhost:8080/MovieRecommender/movies");
+            is = u.openStream();
+            return new DataInputStream(new BufferedInputStream(is));
+        } catch (MalformedURLException mue) {
+            System.err.println("Ouch - a MalformedURLException happened.");
+            mue.printStackTrace();
+            try {
+                is.close();
+            } catch (IOException ioex) {
+                System.err.println("Ouch - An exception occured while closing open stream.");
+            }
+        } catch (IOException ioe) {
+            System.err.println("Oops- an IOException happened.");
+            ioe.printStackTrace();
+            try {
+                is.close();
+            } catch (IOException ioex) {
+                System.err.println("Ouch - An exception occured while closing open stream.");
+            }
+        }
+        return null;
+    }
+    
+    public static DataInputStream getMoviesRatedByUser(int userId) {
+        InputStream is = null;
+
+        try {
+            URL u = new URL("http://localhost:8080/MovieRecommender/movies?user_id="+userId);
+            is = u.openStream();
+            return new DataInputStream(new BufferedInputStream(is));
+        } catch (MalformedURLException mue) {
+            System.err.println("Ouch - a MalformedURLException happened.");
+            mue.printStackTrace();
+            try {
+                is.close();
+            } catch (IOException ioex) {
+                System.err.println("Ouch - An exception occured while closing open stream.");
+            }
+        } catch (IOException ioe) {
+            System.err.println("Oops- an IOException happened.");
+            ioe.printStackTrace();
+            try {
+                is.close();
+            } catch (IOException ioex) {
+                System.err.println("Ouch - An exception occured while closing open stream.");
+            }
+        }
+        return null;
+    }
+    
+    public static DataInputStream getRatingsFromUser(int userId) {
+        InputStream is = null;
+
+        try {
+            URL u = new URL("http://localhost:8080/MovieRecommender/movieratings?user_id="+userId);
+            is = u.openStream();
+            return new DataInputStream(new BufferedInputStream(is));
+        } catch (MalformedURLException mue) {
+            System.err.println("Ouch - a MalformedURLException happened.");
+            mue.printStackTrace();
+            try {
+                is.close();
+            } catch (IOException ioex) {
+                System.err.println("Ouch - An exception occured while closing open stream.");
+            }
+        } catch (IOException ioe) {
+            System.err.println("Oops- an IOException happened.");
+            ioe.printStackTrace();
+            try {
+                is.close();
+            } catch (IOException ioex) {
+                System.err.println("Ouch - An exception occured while closing open stream.");
+            }
+        }
+        return null;
+    }
 }
