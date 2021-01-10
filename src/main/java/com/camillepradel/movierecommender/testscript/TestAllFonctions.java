@@ -21,69 +21,77 @@ import java.util.logging.Logger;
  */
 public class TestAllFonctions {
     
+    private static int[] iterations = {10,100,1000};
+    
     public static void main(String[]args){
         ArrayList<ArrayList<Double>> getMoviesTimer = new ArrayList<>();
-        long startTime = 0;
-        double endTime = 0.0;
+        
+        Double totalTime = 0.0;
+        
         
         // Test : GetAllMovies
-        startTime = System.nanoTime();
-        getMoviesTimer.add(getTimerForGetAllMovies(10));   // [0]
-        getMoviesTimer.add(getTimerForGetAllMovies(100));  // [1]
-        getMoviesTimer.add(getTimerForGetAllMovies(1000)); // [2]
-        endTime = (double) (System.nanoTime() - startTime) / 1000000000.;
-        System.out.println("Time to process GetAllMovies : " + endTime + "s");
+        totalTime = 0.0;
+        for(int iter = 0; iter < iterations.length; iter++) {
+            ArrayList<Double> aRow = getTimerForGetAllMovies(iterations[iter]);
+            getMoviesTimer.add(aRow);
+            totalTime += getTotalTimeForRow(aRow);
+        }
+        System.out.println("Time to process GetAllMovies : " + totalTime + "s");
         
         // Test : GetMoviesRatedByUser
-        startTime = System.nanoTime();
-        getMoviesTimer.add(getTimerForGetMoviesRatedByUser(10));   // [3]
-        getMoviesTimer.add(getTimerForGetMoviesRatedByUser(100));  // [4]
-        getMoviesTimer.add(getTimerForGetMoviesRatedByUser(1000)); // [5]
-        endTime = (double) (System.nanoTime() - startTime) / 1000000000.;
-        System.out.println("Time to process GetMoviesRatedByUser : " + endTime + "s");
+        totalTime = 0.0;
+        for(int iter = 0; iter < iterations.length; iter++) {
+            ArrayList<Double> aRow = getTimerForGetMoviesRatedByUser(iterations[iter]);
+            getMoviesTimer.add(aRow);
+            totalTime += getTotalTimeForRow(aRow);
+        }
+        System.out.println("Time to process GetMoviesRatedByUser : " + totalTime + "s");
         
         // Test : GetRatingsFromUser
-        startTime = System.nanoTime();
-        getMoviesTimer.add(getTimerForGetRatingsFromUser(10));   // [6]
-        getMoviesTimer.add(getTimerForGetRatingsFromUser(100));  // [7]
-        getMoviesTimer.add(getTimerForGetRatingsFromUser(1000)); // [8]
-        endTime = (double) (System.nanoTime() - startTime) / 1000000000.;
-        System.out.println("Time to process GetRatingsFromUser : " + endTime + "s");
+        totalTime = 0.0;
+        for(int iter = 0; iter < iterations.length; iter++) {
+            ArrayList<Double> aRow = getTimerForGetRatingsFromUser(iterations[iter]);
+            getMoviesTimer.add(aRow);
+            totalTime += getTotalTimeForRow(aRow);
+        }
+        System.out.println("Time to process GetRatingsFromUser : " + totalTime + "s");
         
         // Test : AddOrUpdateRatingRequest
-        startTime = System.nanoTime();
-        //getMoviesTimer.add(getTimerForAddOrUpdateRatingRequest(10));   // [9]
-        //getMoviesTimer.add(getTimerForAddOrUpdateRatingRequest(100));  // [10]
-        //getMoviesTimer.add(getTimerForAddOrUpdateRatingRequest(1000)); // [11]
-        getMoviesTimer.add(new ArrayList<Double>());
-        getMoviesTimer.add(new ArrayList<Double>());
-        getMoviesTimer.add(new ArrayList<Double>());
-        endTime = (double) (System.nanoTime() - startTime) / 1000000000.;
-        System.out.println("Time to process AddOrUpdateRatingRequest : " + endTime + "s");
+        totalTime = 0.0;
+        for(int iter = 0; iter < iterations.length; iter++) {
+            //ArrayList<Double> aRow = getTimerForAddOrUpdateRatingRequest(iterations[iter]);
+            ArrayList<Double> aRow = new ArrayList<Double>();
+            getMoviesTimer.add(aRow);
+            totalTime += getTotalTimeForRow(aRow);
+        }
+        System.out.println("Time to process AddOrUpdateRatingRequest : " + totalTime + "s");
         
         // Test : ProcessRecommendationsForUser1
-        startTime = System.nanoTime();
-        getMoviesTimer.add(getTimerForProcessRecommendationsForUser1(10));   // [12]
-        getMoviesTimer.add(getTimerForProcessRecommendationsForUser1(100));  // [13]
-        getMoviesTimer.add(getTimerForProcessRecommendationsForUser1(1000)); // [14]
-        endTime = (double) (System.nanoTime() - startTime) / 1000000000.;
-        System.out.println("Time to process ProcessRecommendationsForUser1 : " + endTime + "s");
+        totalTime = 0.0;
+        for(int iter = 0; iter < iterations.length; iter++) {
+            ArrayList<Double> aRow = getTimerForProcessRecommendationsForUser1(iterations[iter]);
+            getMoviesTimer.add(aRow);
+            totalTime += getTotalTimeForRow(aRow);
+        }
+        System.out.println("Time to process ProcessRecommendationsForUser1 : " + totalTime + "s");
         
         // Test : ProcessRecommendationsForUser2
-        startTime = System.nanoTime();
-        getMoviesTimer.add(getTimerForProcessRecommendationsForUser2(10));   // [15]
-        getMoviesTimer.add(getTimerForProcessRecommendationsForUser2(100));  // [16]
-        getMoviesTimer.add(getTimerForProcessRecommendationsForUser2(1000)); // [17]
-        endTime = (double) (System.nanoTime() - startTime) / 1000000000.;
-        System.out.println("Time to process ProcessRecommendationsForUser2 : " + endTime + "s");
+        totalTime = 0.0;
+        for(int iter = 0; iter < iterations.length; iter++) {
+            ArrayList<Double> aRow = getTimerForProcessRecommendationsForUser2(iterations[iter]);
+            getMoviesTimer.add(aRow);
+            totalTime += getTotalTimeForRow(aRow);
+        }
+        System.out.println("Time to process ProcessRecommendationsForUser2 : " + totalTime + "s");
         
         // Test : ProcessRecommendationsForUser3
-        startTime = System.nanoTime();
-        getMoviesTimer.add(getTimerForProcessRecommendationsForUser3(10));   // [18]
-        getMoviesTimer.add(getTimerForProcessRecommendationsForUser3(100));  // [19]
-        getMoviesTimer.add(getTimerForProcessRecommendationsForUser3(1000)); // [20]
-        endTime = (double) (System.nanoTime() - startTime) / 1000000000.;
-        System.out.println("Time to process ProcessRecommendationsForUser3 : " + endTime + "s");
+        totalTime = 0.0;
+        for(int iter = 0; iter < iterations.length; iter++) {
+            ArrayList<Double> aRow = getTimerForProcessRecommendationsForUser3(iterations[iter]);
+            getMoviesTimer.add(aRow);
+            totalTime += getTotalTimeForRow(aRow);
+        }
+        System.out.println("Time to process ProcessRecommendationsForUser3 : " + totalTime + "s");
         
         ArrayList<Double> timersAverage = getAvgForTimers(getMoviesTimer);
         
@@ -99,8 +107,8 @@ public class TestAllFonctions {
             for(int line = 0; line < avgs.size(); line++) {
                 String message = "";
             
-                int interations = line % 3;
-                int functionType = (int)Math.floor(line / 3);
+                int interations = line % iterations.length;
+                int functionType = (int)Math.floor(line / iterations.length);
 
                 switch(functionType){
                     case 0: message = "GetAllMovies"; break;
@@ -112,11 +120,7 @@ public class TestAllFonctions {
                     case 6: message = "ProcessRecommendationsForUser3"; break;
                 }
 
-                switch(interations){
-                    case 0: message += " (10): \t"; break;
-                    case 1: message += " (100): \t"; break;
-                    case 2: message += " (1000): \t"; break;
-                }
+                message += " ("+ iterations[interations] +"): \t";
 
                 message += ";" + avgs.get(line);
                 writer.println(message);
@@ -135,8 +139,8 @@ public class TestAllFonctions {
         for(int line=0; line < avgs.size(); line++) {
             String message = "";
             
-            int interations = line % 3;
-            int functionType = (int)Math.floor(line / 3);
+            int interations = line % iterations.length;
+            int functionType = (int)Math.floor(line / iterations.length);
 
             switch(functionType){
                 case 0: message = "GetAllMovies"; break;
@@ -148,11 +152,7 @@ public class TestAllFonctions {
                 case 6: message = "ProcessRecommendationsForUser3"; break;
             }
             
-            switch(interations){
-                case 0: message += " (10)  : "; break;
-                case 1: message += " (100) : "; break;
-                case 2: message += " (1000): "; break;
-            }
+            message += " ("+ iterations[interations] +"): \t";
             
             message += avgs.get(line);
             System.out.println(message);
@@ -172,6 +172,14 @@ public class TestAllFonctions {
             timerAvg.add(avg);
         }
         return timerAvg;
+    }
+    
+    private static Double getTotalTimeForRow(ArrayList<Double> timersInRow) {
+        Double totalTime = 0.0;
+        for(double aTime : timersInRow) {
+            totalTime += aTime;
+        }
+        return totalTime;
     }
     
     private static ArrayList<Double> getTimerForGetAllMovies(int count) {
