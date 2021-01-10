@@ -32,7 +32,8 @@ public class Neo4jDatabase extends AbstractDatabase {
     @Override
     public List<Movie> getAllMovies() {
         HashMap<Integer, Genre> allGenres = new HashMap<Integer,Genre>();
-        List<Movie> allMovies = new LinkedList<Movie>();
+        HashMap<Integer, Movie> allMovies = new HashMap<Integer,Movie>();
+        
         
         /// Todo : Change LinkedList
         try ( Session session = driver.session() )
@@ -54,40 +55,25 @@ public class Neo4jDatabase extends AbstractDatabase {
                         allGenres.put(genreId, new Genre(genreId, genreTitle));
                     }
                     
+                    Movie aMovie = allMovies.get(movieId);
                     // Ajoute du film si inexistant
-                    if(!checkIfMovieExists(allMovies, movieId)) {
+                    if(aMovie == null) {
                         List<Genre> movieGenres = new LinkedList<>();
                         movieGenres.add(allGenres.get(genreId));
-                        allMovies.add(new Movie(movieId, movieName, movieGenres));
+                        allMovies.put(movieId, new Movie(movieId, movieName, movieGenres));
                     } else {
-                        // Si existant il faut ajouter un autre genre
-                        int movieIndex = getMovieContainingId(allMovies, movieId);
-                        if (movieIndex > -1) {
-                            Movie aMovie = allMovies.get(movieIndex);
-                            aMovie.getGenres().add(allGenres.get(genreId));
-                        } else {
-                            System.err.println("Impossible mais pourquoi pas : Le film n'a pas été trouvé...");
-                        }
+                        aMovie.getGenres().add(allGenres.get(genreId));
                     }
                 }
-                return allMovies;
+                return new LinkedList<Movie>(allMovies.values());
             });
         }
     }
 
     @Override
     public List<Movie> getMoviesRatedByUser(int userId) {
-        // TODO: write query to retrieve all movies rated by user with id userId
-        /*List<Movie> movies = new LinkedList<Movie>();
-        Genre genre0 = new Genre(0, "genre0");
-        Genre genre1 = new Genre(1, "genre1");
-        Genre genre2 = new Genre(2, "genre2");
-        movies.add(new Movie(0, "Titre 0", Arrays.asList(new Genre[]{genre0, genre1})));
-        movies.add(new Movie(3, "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})));
-        return movies;*/
-        
         HashMap<Integer, Genre> allGenres = new HashMap<Integer,Genre>();
-        List<Movie> allMovies = new LinkedList<Movie>();
+        HashMap<Integer, Movie> allMovies = new HashMap<Integer,Movie>();
         
         /// Todo : Change LinkedList
         try ( Session session = driver.session() )
@@ -111,22 +97,17 @@ public class Neo4jDatabase extends AbstractDatabase {
                     }
                     
                     // Ajoute du film si inexistant
-                    if(!checkIfMovieExists(allMovies, movieId)) {
+                    Movie aMovie = allMovies.get(movieId);
+                    // Ajoute du film si inexistant
+                    if(aMovie == null) {
                         List<Genre> movieGenres = new LinkedList<>();
                         movieGenres.add(allGenres.get(genreId));
-                        allMovies.add(new Movie(movieId, movieName, movieGenres));
+                        allMovies.put(movieId, new Movie(movieId, movieName, movieGenres));
                     } else {
-                        // Si existant il faut ajouter un autre genre
-                        int movieIndex = getMovieContainingId(allMovies, movieId);
-                        if (movieIndex > -1) {
-                            Movie aMovie = allMovies.get(movieIndex);
-                            aMovie.getGenres().add(allGenres.get(genreId));
-                        } else {
-                            System.err.println("Impossible mais pourquoi pas : Le film n'a pas été trouvé...");
-                        }
+                        aMovie.getGenres().add(allGenres.get(genreId));
                     }
                 }
-                return allMovies;
+                return new LinkedList<Movie>(allMovies.values());
             });
         }
     }
@@ -207,27 +188,7 @@ public class Neo4jDatabase extends AbstractDatabase {
 
     @Override
     public List<Rating> processRecommendationsForUser(int userId, int processingMode) {
-        // TODO: process recommendations for specified user exploiting other users ratings
-        //       use different methods depending on processingMode parameter
-        /*Genre genre0 = new Genre(0, "genre0");
-        Genre genre1 = new Genre(1, "genre1");
-        Genre genre2 = new Genre(2, "genre2");
-        List<Rating> recommendations = new LinkedList<Rating>();
-        String titlePrefix;
-        if (processingMode == 0) {
-            titlePrefix = "0_";
-        } else if (processingMode == 1) {
-            titlePrefix = "1_";
-        } else if (processingMode == 2) {
-            titlePrefix = "2_";
-        } else {
-            titlePrefix = "default_";
-        }
-        recommendations.add(new Rating(new Movie(0, titlePrefix + "Titre 0", Arrays.asList(new Genre[]{genre0, genre1})), userId, 5));
-        recommendations.add(new Rating(new Movie(1, titlePrefix + "Titre 1", Arrays.asList(new Genre[]{genre0, genre2})), userId, 5));
-        recommendations.add(new Rating(new Movie(2, titlePrefix + "Titre 2", Arrays.asList(new Genre[]{genre1})), userId, 4));
-        recommendations.add(new Rating(new Movie(3, titlePrefix + "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})), userId, 3));
-        return recommendations;*/
+        
         switch(processingMode) {
             case 1 : {
                 HashMap<Integer, Genre> allGenres = getAllGenres();
@@ -298,15 +259,6 @@ public class Neo4jDatabase extends AbstractDatabase {
                             Record aRec = rs.next();
                             Integer movieId = aRec.get(0).asInt();
                             String movieName = aRec.get(1).asString();
-                            //Integer rating = aRec.get(2).asInt();
-                            //Integer nbUser = aRec.get(3).asInt();
-
-                            // Ajout du genre pour le film correspondant
-                            /*String IdsExtracted = genreIds.substring(genreIds.indexOf("[")+1, genreIds.indexOf("]"));
-                            List<Genre> movieGenres = new LinkedList<>();
-                            for (String genreId : IdsExtracted.split(", ")) {
-                                movieGenres.add(allGenres.get(Integer.parseInt(genreId)));
-                            }*/
 
                             // Des genres dans le film qui est ajouté dans Rating avec l'ID user et la note associé
                             recommendations.add(new Rating(new Movie(movieId, movieName, null), 0, 0));
@@ -362,15 +314,6 @@ public class Neo4jDatabase extends AbstractDatabase {
                                 Record aRec = rs.next();
                                 Integer movieId = aRec.get(0).asInt();
                                 String movieName = aRec.get(1).asString();
-                                //Integer rating = aRec.get(2).asInt();
-                                //Integer nbUser = aRec.get(3).asInt();
-
-                                // Ajout du genre pour le film correspondant
-                                /*String IdsExtracted = genreIds.substring(genreIds.indexOf("[")+1, genreIds.indexOf("]"));
-                                List<Genre> movieGenres = new LinkedList<>();
-                                for (String genreId : IdsExtracted.split(", ")) {
-                                    movieGenres.add(allGenres.get(Integer.parseInt(genreId)));
-                                }*/
 
                                 // Des genres dans le film qui est ajouté dans Rating avec l'ID user et la note associé
                                 recommendations.add(new Rating(new Movie(movieId, movieName, null), 0, 0));
@@ -413,14 +356,14 @@ public class Neo4jDatabase extends AbstractDatabase {
         }
     }
 
-    private Boolean checkIfMovieExists(List<Movie> allMovies, Integer movieId) {
+    /*private Boolean checkIfMovieExists(List<Movie> allMovies, Integer movieId) {
         for (Movie aMovie : allMovies) {
             if (aMovie.getId() == movieId) {
                 return true;
             }
         }
         return false;
-    }
+    }*/
     
     private Integer getMovieContainingId(List<Movie> allMovies, Integer movieId) {
         for (int i = 0; i <= allMovies.size(); i++) {
