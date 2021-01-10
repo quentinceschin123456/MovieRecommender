@@ -14,7 +14,7 @@
 <ul>
 	<c:forEach items="${recommendations}" var="recommendation">
 		<li>
-			${recommendation.getMovie().title}
+			(id:${recommendation.getMovie().getId()}) - ${recommendation.getMovie().title}
 		</li>
 	</c:forEach>
 </ul>
